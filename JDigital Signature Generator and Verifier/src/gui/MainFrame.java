@@ -30,6 +30,8 @@ import javax.swing.UnsupportedLookAndFeelException;
 
 public class MainFrame extends javax.swing.JFrame {
 
+    JFileChooser fc = new JFileChooser("C:\\Users\\chad\\Desktop");
+
     public MainFrame() {
         initComponents();
     }
@@ -299,53 +301,50 @@ public class MainFrame extends javax.swing.JFrame {
             byte[] encodedKey = new byte[keyIn.available()];
             keyIn.read(encodedKey);
             keyIn.close();
-            
+
             //restore public key
             X509EncodedKeySpec spec = new X509EncodedKeySpec(encodedKey);
             KeyFactory keyFactory = KeyFactory.getInstance("DSA", "SUN");
             PublicKey pubKey = keyFactory.generatePublic(spec);
-            
+
             //read the sign bytes
             File signFile = new File(txtSignFile.getText());
             BufferedInputStream signIn = new BufferedInputStream(new FileInputStream(signFile));
             byte[] signToVerify = new byte[signIn.available()];
             signIn.read(signToVerify);
             signIn.close();
-            
+
             //init the sign
             Signature sign = Signature.getInstance("SHA1withDSA", "SUN");
             sign.initVerify(pubKey);
-            
+
             //suply sign to the data
             File toVerify = new File(txtVerifyFile.getText());
             BufferedInputStream fileIn = new BufferedInputStream(new FileInputStream(toVerify));
             byte[] buf = new byte[1024];
             int len;
-            while (fileIn.available() != 0){
+            while (fileIn.available() != 0) {
                 len = fileIn.read(buf);
                 sign.update(buf, 0, len);
             }
             fileIn.close();
-            
+
             //verify
             boolean verified = sign.verify(signToVerify);
-            
+
             //message
-            if(verified){
+            if (verified) {
                 lblStatus.setText("The file is verified with key successful.");
-            } else{
+            } else {
                 lblStatus.setText("The file is verified with key. Verify failed");
             }
-            
-            
-        } catch (FileNotFoundException ex) {
-            lblStatus.setText(ex.getMessage());
-            Logger.getLogger(MainFrame.class.getName()).log(Level.SEVERE, null, ex);
-        } catch (IOException | NoSuchAlgorithmException | NoSuchProviderException | InvalidKeySpecException | InvalidKeyException | SignatureException ex) {
+
+
+        }  catch (IOException | NoSuchAlgorithmException | NoSuchProviderException | InvalidKeySpecException | InvalidKeyException | SignatureException ex) {
             lblStatus.setText(ex.getMessage());
             Logger.getLogger(MainFrame.class.getName()).log(Level.SEVERE, null, ex);
         }
-        
+
     }//GEN-LAST:event_btnVerifyActionPerformed
 
     private void btnGenerateActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnGenerateActionPerformed
@@ -411,6 +410,7 @@ public class MainFrame extends javax.swing.JFrame {
             Logger.getLogger(MainFrame.class.getName()).log(Level.SEVERE, null, ex);
         }
         java.awt.EventQueue.invokeLater(new Runnable() {
+            @Override
             public void run() {
                 new MainFrame().setVisible(true);
             }
@@ -453,7 +453,6 @@ public class MainFrame extends javax.swing.JFrame {
     // End of variables declaration//GEN-END:variables
 
     private void chooseFile(JTextField jTextField) {
-        JFileChooser fc = new JFileChooser("C:\\Users\\chad\\Desktop");
         int action = fc.showOpenDialog(this);
         if (action == JFileChooser.APPROVE_OPTION) {
             jTextField.setText(fc.getSelectedFile().getPath());
