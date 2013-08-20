@@ -9,6 +9,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.security.InvalidKeyException;
+import java.security.KeyFactory;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
@@ -18,6 +19,8 @@ import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.security.Signature;
 import java.security.SignatureException;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.X509EncodedKeySpec;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.JFileChooser;
@@ -84,6 +87,11 @@ public class MainFrame extends javax.swing.JFrame {
         pnlGenTab.add(pnlGenTabHeader, java.awt.BorderLayout.PAGE_START);
 
         btnGenerate.setText("Generate Signature");
+        btnGenerate.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnGenerateActionPerformed(evt);
+            }
+        });
         pnlGenTabFooter.add(btnGenerate);
 
         pnlGenTab.add(pnlGenTabFooter, java.awt.BorderLayout.PAGE_END);
@@ -255,6 +263,11 @@ public class MainFrame extends javax.swing.JFrame {
 
         btnExit.setText("Exit");
         btnExit.setPreferredSize(new java.awt.Dimension(66, 23));
+        btnExit.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnExitActionPerformed(evt);
+            }
+        });
         pnlFooter.add(btnExit);
 
         getContentPane().add(pnlFooter, java.awt.BorderLayout.PAGE_END);
@@ -279,6 +292,63 @@ public class MainFrame extends javax.swing.JFrame {
     }//GEN-LAST:event_btnPubkeyChooseActionPerformed
 
     private void btnVerifyActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnVerifyActionPerformed
+        try {
+            //read encoded key from file
+            File keyFile = new File(txtPubkeyFile.getText());
+            BufferedInputStream keyIn = new BufferedInputStream(new FileInputStream(keyFile));
+            byte[] encodedKey = new byte[keyIn.available()];
+            keyIn.read(encodedKey);
+            keyIn.close();
+            
+            //restore public key
+            X509EncodedKeySpec spec = new X509EncodedKeySpec(encodedKey);
+            KeyFactory keyFactory = KeyFactory.getInstance("DSA", "SUN");
+            PublicKey pubKey = keyFactory.generatePublic(spec);
+            
+            //read the sign bytes
+            File signFile = new File(txtSignFile.getText());
+            BufferedInputStream signIn = new BufferedInputStream(new FileInputStream(signFile));
+            byte[] signToVerify = new byte[signIn.available()];
+            signIn.read(signToVerify);
+            signIn.close();
+            
+            //init the sign
+            Signature sign = Signature.getInstance("SHA1withDSA", "SUN");
+            sign.initVerify(pubKey);
+            
+            //suply sign to the data
+            File toVerify = new File(txtVerifyFile.getText());
+            BufferedInputStream fileIn = new BufferedInputStream(new FileInputStream(toVerify));
+            byte[] buf = new byte[1024];
+            int len;
+            while (fileIn.available() != 0){
+                len = fileIn.read(buf);
+                sign.update(buf, 0, len);
+            }
+            fileIn.close();
+            
+            //verify
+            boolean verified = sign.verify(signToVerify);
+            
+            //message
+            if(verified){
+                lblStatus.setText("The file is verified with key successful.");
+            } else{
+                lblStatus.setText("The file is verified with key. Verify failed");
+            }
+            
+            
+        } catch (FileNotFoundException ex) {
+            lblStatus.setText(ex.getMessage());
+            Logger.getLogger(MainFrame.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (IOException | NoSuchAlgorithmException | NoSuchProviderException | InvalidKeySpecException | InvalidKeyException | SignatureException ex) {
+            lblStatus.setText(ex.getMessage());
+            Logger.getLogger(MainFrame.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        
+    }//GEN-LAST:event_btnVerifyActionPerformed
+
+    private void btnGenerateActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnGenerateActionPerformed
         try {
             //init keygen
             KeyPairGenerator keygen = KeyPairGenerator.getInstance("DSA", "SUN");
@@ -321,12 +391,18 @@ public class MainFrame extends javax.swing.JFrame {
             keyOut.write(pubKey.getEncoded());
             keyOut.close();
 
+            //message
+            lblStatus.setText("General Signature Successful");
 
         } catch (NoSuchAlgorithmException | NoSuchProviderException | InvalidKeyException | SignatureException | IOException ex) {
             lblStatus.setText(ex.getMessage());
             Logger.getLogger(MainFrame.class.getName()).log(Level.SEVERE, null, ex);
         }
-    }//GEN-LAST:event_btnVerifyActionPerformed
+    }//GEN-LAST:event_btnGenerateActionPerformed
+
+    private void btnExitActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnExitActionPerformed
+        System.exit(0);
+    }//GEN-LAST:event_btnExitActionPerformed
 
     public static void main(String args[]) {
         try {
